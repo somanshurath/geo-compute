@@ -193,29 +193,98 @@ code {
 .mode-buttons {
   display: flex;
   gap: 5px;
-  margin: 10px 0;
+  margin: 5px 0;
 }
 
 .mode-buttons button {
-  background-color: #258ccc;
-  color: #282c34;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-top: 5px !important;
 }
 
-.mode-buttons button:hover {
-  background-color: #61dafb;
-}
-
-.mode-buttons .selected {
+.selected {
   background-color: #61dafb !important;
   color: #282c34 !important;
 }
 
 .algo-section {
-  margin-top: 20px;
+  margin-top: 10px;
+  color: #cccccc;
+}
+
+.algo-section input[type="number"] {
+  background-color: #2a2a3d;
+  color: #f0f0f0;
+  border: 1px solid #444;
+  border-radius: 5px;
+  padding: 6px 10px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  width: 60px;
+  height: 1.2rem;
+  margin-right: 20px;
+}
+
+.algo-section input[type="number"]:hover {
+  border-color: #61dafb;
+}
+
+.algo-section input[type="number"]:focus {
+  outline: none;
+  border-color: #61dafb;
+  box-shadow: 0 0 5px rgba(97, 223, 251, 0.5);
+}
+
+/* Styling the up/down arrows */
+.algo-section input[type="number"]::-webkit-inner-spin-button {
+  opacity: 1;
+  background: #258ccc;
+  border-radius: 3px;
+  height: 20px;
+  margin-right: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.algo-section input[type="number"]::-webkit-inner-spin-button:hover {
+  background-color: #61dafb;
+  transform: scale(1.1);
+}
+
+h1,
+h2,
+p,
+button,
+label {
+  user-select: none;
+}
+
+.sec-btn-grey {
+  background-color: #555;
+  color: #f0f0f0;
+  margin: 10px 5px 0 0;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sec-btn-grey:hover {
+  background-color: #777;
+  transform: scale(1.05);
+}
+
+.sec-btn-success {
+  background-color: #28a745;
+  color: #f0f0f0;
+  margin: 10px 5px 0 0;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sec-btn-success:hover {
+  background-color: #2ecc71;
+  transform: scale(1.05);
 }
