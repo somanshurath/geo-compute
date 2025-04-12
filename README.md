@@ -5,7 +5,7 @@ A web-based application for visualizing and analyzing geometric data. You can co
 
 Currently Fruchterman-Reingold algorithm has been implemented. The application is built using `React` and `Three.js` for rendering (all computations and rendering is being done in `2d only`, for purposes of simplicity).
 
-![Geo-Compute](frontend\src\assets\image.png)
+![Geo-Compute](frontend/src/assets/image.png)
 
 Further plans:
 
