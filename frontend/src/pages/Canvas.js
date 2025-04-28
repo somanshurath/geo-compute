@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 import { fnIsTree } from '../algorithms/tree-detection';
 import { fruchtermanReingold } from '../algorithms/fruchtermanReingold';
@@ -110,20 +111,28 @@ function Canvas() {
             setEdges([]);
         }
         sceneRef.current.clear();
-        const gridHelper = new THREE.GridHelper(20, 20);
+
+        const gridHelper = new THREE.GridHelper(1000, 1000, 0x888888);
         gridHelper.rotation.x = Math.PI / 2;
         sceneRef.current.add(gridHelper);
     };
 
     const handleCanvasClick = React.useCallback((event) => {
         const findNearestNode = (x, y) => {
+            if (!sceneRef.current || !cameraRef.current) return null;
+            const camera = cameraRef.current;
+            const cameraX = camera.position.x;
+            const cameraY = camera.position.y;
+            const zoom = camera.zoom;
+            const adjustedX = (x - cameraX) / zoom;
+            const adjustedY = (y - cameraY) / zoom;
             if (nodes.length === 0) return null;
 
             let nearestNodeIndex = null;
             let minDistance = 0.2;
 
             nodes.forEach((node, index) => {
-                const distance = Math.sqrt((node[0] - x) ** 2 + (node[1] - y) ** 2);
+                const distance = Math.sqrt((node[0] - adjustedX) ** 2 + (node[1] - adjustedY) ** 2);
                 if (distance < minDistance) {
                     minDistance = distance;
                     nearestNodeIndex = index;
@@ -163,8 +172,15 @@ function Canvas() {
                     setSelectedNode(null);
                 }
             }
+        } else if (mode === 4 && selectedAlgorithm === 5) {
+            const nearestNode = findNearestNode(worldX, worldY);
+            if (nearestNode !== null && nearestNode !== selectedNode) {
+                setSelectedNode(nearestNode);
+                alert(`Root node for radial layout set to node ${nearestNode}`);
+            }
         }
-    }, [mode, selectedNode, nodes]);
+    }, [mode, selectedNode, selectedAlgorithm, nodes]);
+
 
     useEffect(() => {
         const scene = new THREE.Scene();
@@ -191,12 +207,18 @@ function Canvas() {
             mountRef.current.appendChild(renderer.domElement);
         }
 
-        const gridHelper = new THREE.GridHelper(20, 20);
+        const gridHelper = new THREE.GridHelper(1000, 1000, 0x888888);
         gridHelper.rotation.x = Math.PI / 2;
         scene.add(gridHelper);
 
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableRotate = false;
+        controls.enableZoom = true;
+        controls.screenSpacePanning = true;
+
         const animate = () => {
             requestAnimationFrame(animate);
+            controls.update();
             renderer.render(scene, camera);
         };
         animate();
@@ -264,23 +286,29 @@ function Canvas() {
         };
     }, [mode, nodes, edges, selectedNode, handleCanvasClick]);
 
-    const recalibrateGraph = (nodes) => {
-        if (nodes.length === 0) return;
-        const xMin = Math.min(...nodes.map(node => node[0]));
-        const xMax = Math.max(...nodes.map(node => node[0]));
-        const yMin = Math.min(...nodes.map(node => node[1]));
-        const yMax = Math.max(...nodes.map(node => node[1]));
-        const xCenter = (xMin + xMax) / 2;
-        const yCenter = (yMin + yMax) / 2;
-        const xOffset = -xCenter;
-        const yOffset = -yCenter;
-        const xScale = 8 / (xMax - xMin);
-        const yScale = 8 / (yMax - yMin);
+    const recalibrateGraph = (nodes, calib = true) => {
+        if (calib) {
+            if (nodes.length === 0) return;
+            const xMin = Math.min(...nodes.map(node => node[0]));
+            const xMax = Math.max(...nodes.map(node => node[0]));
+            const yMin = Math.min(...nodes.map(node => node[1]));
+            const yMax = Math.max(...nodes.map(node => node[1]));
+            const xCenter = (xMin + xMax) / 2;
+            const yCenter = (yMin + yMax) / 2;
+            const xOffset = -xCenter;
+            const yOffset = -yCenter;
+            const xScale = 8 / (xMax - xMin);
+            const yScale = 8 / (yMax - yMin);
 
-        const newNodes = nodes.map
-            (node => [(node[0] + xOffset) * xScale, (node[1] + yOffset) * yScale, node[2]]);
-        clearScene(false);
-        setNodes(newNodes);
+            const newNodes = nodes.map
+                (node => [(node[0] + xOffset) * xScale, (node[1] + yOffset) * yScale, node[2]]);
+            clearScene(false);
+            setNodes(newNodes);
+        }
+        else {
+            clearScene(false);
+            setNodes(nodes);
+        }
     }
 
     const reingoldTilford = () => {
@@ -289,10 +317,75 @@ function Canvas() {
         alert("Reingold-Tilford algorithm is not implemented yet.");
     }
 
+    const postorder = (nodes, edges, subtreeSizes, depths, root) => {
+        const visited = new Array(nodes.length).fill(false);
+
+        const dfs = (node, dep) => {
+            visited[node] = true;
+            subtreeSizes[node] = 1;
+            depths[node] = dep;
+
+            for (const child of edges[node]) {
+                if (!visited[child]) {
+                    dfs(child, dep + 1);
+                    subtreeSizes[node] += subtreeSizes[child];
+                }
+            }
+        };
+
+        dfs(root, 0);
+    };
+
+    const preorder = (nodes, edges, subtreeSizes, depths, node, amin, amax, dist, angle, radiusStep) => {
+        dist[node] = depths[node] * radiusStep;
+        angle[node] = (amax + amin) / 2;
+
+        if (depths[node] > 0) {
+            amin = Math.max(amin, angle[node] - Math.acos(dist[node] / (dist[node] + radiusStep)));
+            amax = Math.min(amax, angle[node] + Math.acos(dist[node] / (dist[node] + radiusStep)));
+        }
+
+        const angleStep = (amax - amin) / (subtreeSizes[node] - 1);
+
+        let left = amin;
+        for (const child of edges[node]) {
+            if (dist[child] === -1) {
+                let right = left + angleStep * subtreeSizes[child];
+                preorder(nodes, edges, subtreeSizes, depths, child, left, right, dist, angle, radiusStep);
+                left = right;
+            }
+        }
+    };
+
+
+    function polarToCartesian(radius, angle) {
+        return [radius * Math.cos(angle), radius * Math.sin(angle), 0];
+    };
+
+    function convertToCartesian(distance, angle) {
+        const newPositions = new Array(distance.length).fill(0).map(() => [0, 0, 0]);
+        for (let i = 0; i < distance.length; i++) {
+            const [x, y] = polarToCartesian(distance[i], angle[i]);
+            newPositions[i] = [x, y, 0];
+        }
+        return newPositions;
+    };
+
+    function radialTreeLayout(nodes, edges, root = 1, radiusStep = 2) {
+        const N = nodes.length;
+        const subtreeSizes = new Array(N).fill(0);
+        let depths = new Array(N).fill(0);
+        postorder(nodes, edges, subtreeSizes, depths, root);
+
+        const distance = new Array(N).fill(-1);
+        const angle = new Array(N).fill(0);
+        preorder(nodes, edges, subtreeSizes, depths, root, -Math.PI, Math.PI, distance, angle, radiusStep);
+
+        return convertToCartesian(distance, angle);
+    }
+
     const radial = () => {
-        // Implement Radial algorithm here
-        // This is a placeholder function for the Radial algorithm
-        alert("Radial algorithm is not implemented yet.");
+        recalibrateGraph(radialTreeLayout(nodes, edges, selectedNode || 0), false);
     }
 
     useEffect(() => {
@@ -346,6 +439,7 @@ function Canvas() {
         const vertexCount = nodes.length;
         const edgeCount = edges.reduce((sum, neighbors) => sum + neighbors.length, 0) / 2;
 
+        console.log("computing again");
         const isTreeResult = await fnIsTree(adjList, vertexCount, edgeCount);
 
         setIsTree(isTreeResult);
@@ -368,82 +462,6 @@ function Canvas() {
                         style={{ width: '30px', verticalAlign: 'middle', marginRight: '10px', paddingBottom: '10px' }} />
                     Geo-Compute
                 </h1>
-
-                {mode < 4 && (<>
-                    <p>Graph Visualization Tool</p>
-                    <div className="mode-buttons">
-                        <button
-                            className={mode === 1 ? 'selected btn' : 'btn'}
-                            onClick={() => {
-                                setMode((prevMode) => (prevMode !== 1 ? 1 : 0));
-                                setSelectedNode(null);
-                            }}
-                        >
-                            Add Node
-                        </button>
-                        <button
-                            className={mode === 2 ? 'selected btn' : 'btn'}
-                            onClick={() => {
-                                if (nodes.length < 2) {
-                                    alert("Please add 2 nodes first.");
-                                    return;
-                                }
-                                setMode((prevMode) => (prevMode !== 2 ? 2 : 0));
-                                setSelectedNode(null);
-                            }}
-                        >
-                            Add Edge
-                        </button>
-                    </div>
-
-                    <p>Nodes: {nodes.length}</p>
-                    <p>Edges: {edges.reduce((sum, neighbors) => sum + neighbors.length, 0) / 2}</p>
-
-                    <button onClick={() => saveData(nodes, edges)} className="sec-btn-success">
-                        Save Graph
-                    </button>
-                    <button onClick={() => clearScene(true)} className="sec-btn-grey">
-                        Clear Graph
-                    </button>
-                    <input
-                        type="file"
-                        accept=".json"
-                        onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                                clearScene(true);
-                                loadData(file);
-                            }
-                        }}
-                    />
-                    {nodes.length > 0 && (<>
-                        <button
-                            onClick={() => {
-                                if (!nodes.length && !edges.length) {
-                                    alert("Please add a graph first.");
-                                    return;
-                                }
-                                checkTree();
-                                setMode(4)
-                            }}
-                            className="btn"
-                        >
-                            Graph Layout Algorithms
-                        </button>
-                        {/* <button
-                            onClick={() => {
-                                if (!nodes.length && !edges.length) {
-                                    alert("Please add a graph first.");
-                                    return;
-                                }
-                                checkTree();
-                            }}
-                            className="btn"
-                        >
-                            Check if Tree
-                        </button> */}
-                    </>)}
-                </>)}
                 {mode === 4 && (<>
                     <button className="sec-btn-grey"
                         onClick={() => {
@@ -452,86 +470,206 @@ function Canvas() {
                         }}>
                         Back
                     </button>
-                    <div className='algo-section'>
-                        <h2>Graph Layout Algorithms</h2>
-                        <button
-                            className={selectedAlgorithm === 1 ? 'selected btn' : 'btn'}
-                            onClick={() => {
-                                setSelectedAlgorithm(1);
-                            }}
-                        >
-                            Fruchterman-Reingold
-                        </button>
-                        <button
-                            className={selectedAlgorithm === 2 ? 'selected btn' : 'btn'}
-                            onClick={() => {
-                                setSelectedAlgorithm(2);
-                            }}
-                        >
-                            Eades
-                        </button>
-                        <button
-                            className={selectedAlgorithm === 3 ? 'selected btn' : 'btn'}
-                            onClick={() => {
-                                setSelectedAlgorithm(3);
-                            }}
-                        >
-                            Tutte
-                        </button>
-                        <div className="iterations-container">
-                            <label htmlFor="iterationsA">Number of Iterations</label>
-                            <input
-                                type="number"
-                                id="iterationsA"
-                                min="1"
-                                max="2000"
-                                defaultValue="100"
-                            />
-                        </div>
-                        <button
-                            onClick={() => {
-                                const iterationsInput = document.querySelector("#iterationsA");
-                                const iterations = iterationsInput ? parseInt(iterationsInput.value, 10) : 0;
-
-                                if (selectedAlgorithm === 1) {
-                                    recalibrateGraph(fruchtermanReingold(iterations, nodes, edges));
-                                } else if (selectedAlgorithm === 2) {
-                                    alert("Eades algorithm is not implemented yet.");
-                                } else if (selectedAlgorithm === 3) {
-                                    alert("Tutte algorithm is not implemented yet.");
-                                } else {
-                                    alert("Choose an algorithm to apply to the graph.");
-                                }
-                            }}
-                            className="btn"
-                        >
-                            Run
-                        </button>
-                    </div>
-                    {!isProcessing && isTree && (<>
-                        <div className='algo-section'>
-                            <h2>Tree Layout Algorithms</h2>
-                            <h3 style={{ color: '#32CD32' }}>(Graph is a tree)</h3>
-
-                            <button
-                                className={selectedAlgorithm === 4 ? 'selected btn' : 'btn'}
-                                onClick={() => {
-                                    reingoldTilford();
-                                }}
-                            >
-                                Reingold-Tilford
-                            </button>
-                            <button
-                                className={selectedAlgorithm === 5 ? 'selected btn' : 'btn'}
-                                onClick={() => {
-                                    radial();
-                                }}
-                            >
-                                Radial
-                            </button>
-                        </div>
-                    </>)}
                 </>)}
+                <button
+                    className="sec-btn-grey"
+                    onClick={() => {
+                        const header = document.querySelector('.canvas-header-content');
+                        if (header) {
+                            header.style.display = header.style.display === 'none' ? 'block' : 'none';
+                        }
+                    }}
+                >
+                    Toggle View
+                </button>
+
+
+                <div className='canvas-header-content'>
+                    {mode < 4 && (
+                        <>
+                            <h2>Graph Editor</h2>
+                            <p>Construct a graph by adding nodes and edges.</p>
+                            <div className="mode-buttons">
+                                <button
+                                    className={mode === 1 ? 'selected btn no-hover' : 'btn'}
+                                    onClick={() => {
+                                        setMode((prevMode) => (prevMode !== 1 ? 1 : 0));
+                                        setSelectedNode(null);
+                                    }}
+                                >
+                                    Add Node
+                                </button>
+                                <button
+                                    className={mode === 2 ? 'selected btn no-hover' : 'btn'}
+                                    onClick={() => {
+                                        if (nodes.length < 2) {
+                                            alert("Please add 2 nodes first.");
+                                            return;
+                                        }
+                                        setMode((prevMode) => (prevMode !== 2 ? 2 : 0));
+                                        setSelectedNode(null);
+                                    }}
+                                >
+                                    Add Edge
+                                </button>
+                            </div>
+
+                            <p>Nodes: {nodes.length}</p>
+                            <p>Edges: {edges.reduce((sum, neighbors) => sum + neighbors.length, 0) / 2}</p>
+
+                            <button onClick={() => saveData(nodes, edges)} className="sec-btn-success">
+                                Save Graph
+                            </button>
+                            <button onClick={() => clearScene(true)} className="sec-btn-grey">
+                                Clear Graph
+                            </button>
+                            <div>
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            clearScene(true);
+                                            loadData(file);
+                                        }
+                                    }}
+                                />
+                            </div>
+                            {nodes.length > 0 && (<div>
+                                <button
+                                    onClick={() => {
+                                        if (!nodes.length && !edges.length) {
+                                            alert("Please add a graph first.");
+                                            return;
+                                        }
+                                        setIsProcessing(true);
+                                        checkTree();
+                                        setMode(4)
+                                    }}
+                                    className="btn"
+                                >
+                                    Graph Layout Algorithms
+                                </button>
+                            </div>)}
+                        </>)}
+                    {mode === 4 && (<>
+                        <div className='algo-section'>
+                            <h2>Graph Layout Algorithms</h2>
+                            <p>Choose an algorithm to apply to the graph.</p>
+                            <button
+                                className={selectedAlgorithm === 1 ? 'selected btn no-hover' : 'btn-outline'}
+                                onClick={() => {
+                                    setSelectedAlgorithm(1);
+                                }}
+                            >
+                                Fruchterman-Reingold
+                            </button>
+                            {/* <button
+                                className={selectedAlgorithm === 2 ? 'selected btn no-hover' : 'btn-outline'}
+                                onClick={() => {
+                                    setSelectedAlgorithm(2);
+                                }}
+                            >
+                                Eades
+                            </button>
+                            <button
+                                className={selectedAlgorithm === 3 ? 'selected btn no-hover' : 'btn-outline'}
+                                onClick={() => {
+                                    setSelectedAlgorithm(3);
+                                }}
+                            >
+                                Tutte
+                            </button> */}
+                            <div className="iterations-container">
+                                <label htmlFor="iterationsA">Number of Iterations</label>
+                                <input
+                                    type="number"
+                                    id="iterationsA"
+                                    min="1"
+                                    max="2000"
+                                    defaultValue="100"
+                                />
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const iterationsInput = document.querySelector("#iterationsA");
+                                    const iterations = iterationsInput ? parseInt(iterationsInput.value, 10) : 0;
+
+                                    if (selectedAlgorithm === 1) {
+                                        recalibrateGraph(fruchtermanReingold(iterations, nodes, edges));
+                                    } else if (selectedAlgorithm === 2) {
+                                        alert("Eades algorithm is not implemented yet.");
+                                    } else if (selectedAlgorithm === 3) {
+                                        alert("Tutte algorithm is not implemented yet.");
+                                    } else {
+                                        alert("Choose an algorithm to apply to the graph.");
+                                    }
+                                }}
+                                className="btn no-hover"
+                                style={{ marginTop: '0px' }}
+                            >
+                                Run
+                            </button>
+                        </div>
+                        {!isProcessing && isTree && (<>
+                            <div className='algo-section'>
+                                <h2>Tree Layout Algorithms</h2>
+                                <h3 style={{ color: '#32CD32' }}>(Graph is a tree)</h3>
+
+                                {/* <button
+                                    className={selectedAlgorithm === 4 ? 'selected btn no-hover' : 'btn-outline'}
+                                    onClick={() => {
+                                        setSelectedAlgorithm(4);
+
+                                    }}
+                                >
+                                    Reingold-Tilford
+                                </button> */}
+                                <button
+                                    className={selectedAlgorithm === 5 ? 'selected btn no-hover' : 'btn-outline'}
+                                    onClick={() => {
+                                        setSelectedAlgorithm(5);
+                                    }}
+                                >
+                                    Radial
+                                </button>
+                                <button
+                                    className="btn no-hover"
+                                    onClick={() => {
+                                        if (selectedAlgorithm === 4) {
+                                            reingoldTilford();
+                                        } else if (selectedAlgorithm === 5) {
+                                            radial();
+                                        } else {
+                                            alert("Choose an algorithm to apply to the graph.");
+                                        }
+                                    }}>
+                                    Run
+                                </button>
+                                {selectedAlgorithm === 5 && (<>
+                                    <p>You can select the root node for the radial layout.</p>
+                                </>)}
+                            </div>
+                        </>)}
+                        {isProcessing && (<>
+                            <div className='algo-section'>
+                                <h2>Processing...</h2>
+                                <p>Please wait while we check if the graph is a tree.</p>
+                            </div>
+                        </>
+                        )}
+                        {!isProcessing && !isTree && (<>
+                            <div className='algo-section'>
+                                <h2>Tree Layout Algorithms</h2>
+                                <h3 style={{ color: '#FF0000' }}>(Graph is not a tree)</h3>
+                                <p>Tree layout algorithms are not applicable to non-tree graphs.</p>
+                            </div>
+                        </>
+                        )}
+
+                    </>)}
+                </div>
             </div>
         </div >
     );
