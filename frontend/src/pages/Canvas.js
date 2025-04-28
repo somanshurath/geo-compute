@@ -93,32 +93,126 @@ function Canvas() {
         }, 3000);
     };
 
-    const saveData = (nodes, edges) => {
+    const saveData = (nodes, edges, format = ".graphml") => {
         if (nodes.length === 0 && edges.length === 0) {
             alert("No data to save. Please add nodes or edges first.");
             return;
         }
-        const data = { nodes, edges };
-        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `graph_${saveCount}.json`;
-        saveCount++;
-        a.click();
-        URL.revokeObjectURL(url);
+        if (format === ".json") {
+            const data = { nodes, edges };
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `graph_${saveCount}.json`;
+            saveCount++;
+            a.click();
+            URL.revokeObjectURL(url);
+        } else if (format === ".graphml") {
+            const xmlDoc = document.implementation.createDocument(null, "graphml");
+            const graphml = xmlDoc.documentElement;
+            const graph = xmlDoc.createElement("graph");
+            graph.setAttribute("id", "G");
+            graph.setAttribute("edgedefault", "undirected");
+
+            nodes.forEach((node, index) => {
+                const nodeElement = xmlDoc.createElement("node");
+                nodeElement.setAttribute("id", `n${index}`);
+                const xData = xmlDoc.createElement("data");
+                xData.setAttribute("key", "x");
+                xData.textContent = node[0];
+                const yData = xmlDoc.createElement("data");
+                yData.setAttribute("key", "y");
+                yData.textContent = node[1];
+                nodeElement.appendChild(xData);
+                nodeElement.appendChild(yData);
+                graph.appendChild(nodeElement);
+            });
+
+            edges.forEach((neighbors, sourceIndex) => {
+                neighbors.forEach((targetIndex) => {
+                    if (sourceIndex < targetIndex) {
+                        const edgeElement = xmlDoc.createElement("edge");
+                        edgeElement.setAttribute("source", `n${sourceIndex}`);
+                        edgeElement.setAttribute("target", `n${targetIndex}`);
+                        graph.appendChild(edgeElement);
+                    }
+                });
+            });
+
+            graphml.appendChild(graph);
+            const serializer = new XMLSerializer();
+            const graphmlString = serializer.serializeToString(xmlDoc);
+            const blob = new Blob([graphmlString], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `graph_${saveCount}.graphml`;
+            saveCount++;
+            a.click();
+            URL.revokeObjectURL(url);
+        } else {
+            alert("Unsupported format. Please use .json or .graphml.");
+        }
     };
 
     const loadData = (file) => {
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             try {
-                const data = JSON.parse(event.target.result);
-                setNodes(data.nodes || []);
-                setEdges(data.edges || []);
+                // keeping json since made app for it initially
+                if (file.name.endsWith('.json')) {
+                    const data = JSON.parse(event.target.result);
+                    setNodes(data.nodes || []);
+                    setEdges(data.edges || []);
+                } else if (file.name.endsWith('.graphml')) {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(event.target.result, "application/xml");
+                    const graphElement = xmlDoc.querySelector("graph");
+
+                    if (!graphElement) {
+                        throw new Error("Invalid GraphML file: Missing <graph> element.");
+                    }
+
+                    const newNodes = [];
+                    const newEdges = [];
+
+                    graphElement.querySelectorAll("node").forEach((node) => {
+                        // const id = node.getAttribute("id");
+                        let x = parseFloat(node.querySelector("data[key='x']")?.textContent);
+                        let y = parseFloat(node.querySelector("data[key='y']")?.textContent);
+                        if (!isNaN(x) && !isNaN(y)) {
+                            newNodes.push([x, y, 0]);
+                        }
+                        else {
+                            x = Math.random() * 10 - 5;
+                            y = Math.random() * 10 - 5;
+                            newNodes.push([x, y, 0]);
+                        }
+                    });
+
+                    graphElement.querySelectorAll("edge").forEach((edge) => {
+                        const source = edge.getAttribute("source");
+                        const target = edge.getAttribute("target");
+                        const sourceIndex = newNodes.findIndex((_, index) => `n${index}` === source);
+                        const targetIndex = newNodes.findIndex((_, index) => `n${index}` === target);
+
+                        if (sourceIndex !== -1 && targetIndex !== -1) {
+                            if (!newEdges[sourceIndex]) newEdges[sourceIndex] = [];
+                            if (!newEdges[targetIndex]) newEdges[targetIndex] = [];
+                            newEdges[sourceIndex].push(targetIndex);
+                            newEdges[targetIndex].push(sourceIndex);
+                        }
+                    });
+
+                    setNodes(newNodes);
+                    setEdges(newEdges);
+                } else {
+                    alert("Unsupported file format. Please upload a JSON or GraphML file.");
+                }
             } catch (error) {
                 console.error("Failed to load graph data:", error);
-                alert("Invalid JSON file. Please upload a valid graph file.");
+                alert("Invalid file. Please upload a valid graph file.");
             }
         };
         reader.readAsText(file);
@@ -527,7 +621,15 @@ function Canvas() {
                                     <p>Nodes: {nodes.length}</p>
                                     <p>Edges: {edges.reduce((sum, neighbors) => sum + neighbors.length, 0) / 2}</p>
 
-                                    <button onClick={() => saveData(nodes, edges)} className="sec-btn-success">
+                                    <button onClick={() => {
+                                        // const format = prompt("Enter the format to save the graph (.json or .graphml):", ".graphml");
+                                        // if (format === ".json" || format === ".graphml") {
+                                        //     saveData(nodes, edges, format);
+                                        // } else {
+                                        //     alert("Invalid format. Please enter .json or .graphml.");
+                                        // }
+                                        saveData(nodes, edges, ".graphml");
+                                    }} className="sec-btn-success">
                                         Save Graph
                                     </button>
                                     <button onClick={() => clearScene(true)} className="sec-btn-grey">
@@ -536,7 +638,7 @@ function Canvas() {
                                     <div>
                                         <input
                                             type="file"
-                                            accept=".json"
+                                            accept=".json, .graphml"
                                             onChange={(e) => {
                                                 const file = e.target.files[0];
                                                 if (file) {
@@ -681,12 +783,12 @@ function Canvas() {
                     onChange={(e) => {
                         const selectedGraph = e.target.value;
                         if (selectedGraph) {
-                            fetch(`/examples/${selectedGraph}.json`)
-                                .then((response) => response.json())
-                                .then((data) => {
+                            fetch(`/examples/${selectedGraph}.graphml`)
+                                .then((response) => response.blob())
+                                .then((blob) => {
+                                    const file = new File([blob], `${selectedGraph}.graphml`, { type: 'application/xml' });
                                     clearScene(true);
-                                    setNodes(data.nodes || []);
-                                    setEdges(data.edges || []);
+                                    loadData(file);
                                 })
                                 .catch((error) => {
                                     console.error('Error loading example data: ', error);
