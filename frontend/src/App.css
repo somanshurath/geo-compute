@@ -133,6 +133,8 @@ code {
 
 @media (max-width: 768px) {
   .canvas-header {
+    left: 50%;
+    transform: translateX(-50%);
     width: 80%;
   }
 }
@@ -172,9 +174,8 @@ code {
   background-color: #258ccc;
   color: #282c34;
   border: 2px solid #258ccc;
-  border-radius: 5px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.3s ease;
 }
 
 .canvas-header .btn:hover {
@@ -190,7 +191,7 @@ code {
   background-color: transparent;
   color: #258ccc;
   border: 2px solid #258ccc;
-  border-radius: 5px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -204,7 +205,7 @@ code {
 .canvas-header input[type="file"] {
   margin-top: 10px;
   padding: 8px;
-  border-radius: 5px;
+  border-radius: 10px;
   font-size: 0.9rem;
   background-color: #2a2a3d;
   color: #f0f0f0;
@@ -261,7 +262,7 @@ label {
   margin: 10px 5px 0 0;
   padding: 8px 12px;
   border: none;
-  border-radius: 5px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-family: inherit;
@@ -278,7 +279,7 @@ label {
   margin: 10px 5px 0 0;
   padding: 8px 12px;
   border: none;
-  border-radius: 5px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -304,7 +305,7 @@ label {
   background-color: #2a2a3d;
   color: #f0f0f0;
   border: 1px solid #444;
-  border-radius: 5px;
+  border-radius: 10px;
   padding: 6px 10px;
   font-size: 1rem;
   transition: all 0.3s ease;
@@ -342,13 +343,13 @@ label {
   background-color: #2a2a3d; /* Dark background */
   color: #f0f0f0; /* Light text */
   border: 1px solid #444; /* Subtle border */
-  border-radius: 5px; /* Rounded corners */
+  border-radius: 10px; /* Rounded corners */
   padding: 8px 12px; /* Padding for better spacing */
   font-size: 1rem; /* Font size */
   font-family: inherit; /* Match the app's font */
   cursor: pointer; /* Pointer cursor for interactivity */
   transition: all 0.3s ease; /* Smooth transition for hover effects */
-  width: 100px;
+  width: 90px;
 }
 
 #example-select:hover {
@@ -364,4 +365,28 @@ label {
 #example-select option {
   background-color: #2a2a3d; /* Dark background for options */
   color: #f0f0f0; /* Light text */
+}
+
+.toggle-view {
+  background-color: rgba(42, 42, 61, 0.8);
+  color: #f0f0f0;
+  padding: 10px 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 20px;
+}
+
+.toggle-view:hover {
+  background-color: #61dafb;
+  color: #282c34;
+  transform: scale(1.05);
+}
+
+.show {
+  position: fixed;
+  left: 20px;
+  top: 20px;
+  margin: 0;
+  font-size: 1rem;
 }

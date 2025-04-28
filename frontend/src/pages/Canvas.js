@@ -24,6 +24,8 @@ function Canvas() {
     const [isTree, setIsTree] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
 
+    const [toggleView, setToggleView] = useState(true);
+
     let saveCount = 1;
 
     const navigate = useNavigate();
@@ -35,7 +37,7 @@ function Canvas() {
         localStorage.setItem('mode', mode);
     }, [mode]);
 
-    const alert = (message) => {
+    const alert = (message, type = 'normal') => {
         if (!customAlertRef.current) {
             const alertDiv = document.createElement('div');
             alertDiv.className = 'custom-alert';
@@ -44,8 +46,6 @@ function Canvas() {
                 top: 20px;
                 left: 50%;
                 transform: translateX(-50%);
-                background-color: #282c34;
-                color: #61dafb;
                 padding: 15px 20px;
                 border-radius: 5px;
                 box-shadow: 0 4px 10px rgba(0,0,0,0.3);
@@ -55,8 +55,27 @@ function Canvas() {
                 font-size: 16px;
                 max-width: 80%;
                 text-align: center;
-                border: 1px solid #61dafb;
             `;
+            if (type === 'normal') {
+                alertDiv.style.cssText += `
+                    background-color: #282c34;
+                    color: #61dafb;
+                    border: 1px solid #61dafb;
+                `;
+            }
+            else if (type === 'success') {
+                alertDiv.style.cssText += `
+                background-color: #282c34;
+                color: #32CD32;
+                border: 1px solid #32CD32;
+                `;
+            } else if (type === 'error') {
+                alertDiv.style.cssText += `
+                    background-color: #282c34;
+                    color: #FF0000;
+                    border: 1px solid #FF0000;
+                `;
+            }
             const textSpan = document.createElement('span');
             document.body.appendChild(alertDiv);
             alertDiv.appendChild(textSpan);
@@ -299,9 +318,10 @@ function Canvas() {
             const yOffset = -yCenter;
             const xScale = 8 / (xMax - xMin);
             const yScale = 8 / (yMax - yMin);
+            const scale = Math.min(xScale, yScale);
 
             const newNodes = nodes.map
-                (node => [(node[0] + xOffset) * xScale, (node[1] + yOffset) * yScale, node[2]]);
+                (node => [(node[0] + xOffset) * scale, (node[1] + yOffset) * scale, node[2]]);
             clearScene(false);
             setNodes(newNodes);
         }
@@ -385,7 +405,7 @@ function Canvas() {
     }
 
     const radial = () => {
-        recalibrateGraph(radialTreeLayout(nodes, edges, selectedNode || 0), false);
+        recalibrateGraph(radialTreeLayout(nodes, edges, selectedNode || 0));
     }
 
     useEffect(() => {
@@ -456,219 +476,232 @@ function Canvas() {
         <div style={{ width: '100%', height: '100vh', overflow: 'hidden' }}>
             <div ref={mountRef} />
 
-            <div className="canvas-header">
-                <h1 onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-                    <img src="/heptagon.png" alt="Logo" className="logo"
-                        style={{ width: '30px', verticalAlign: 'middle', marginRight: '10px', paddingBottom: '10px' }} />
-                    Geo-Compute
-                </h1>
-                {mode === 4 && (<>
-                    <button className="sec-btn-grey"
-                        onClick={() => {
-                            setMode(0);
-                            setSelectedAlgorithm(null);
-                        }}>
-                        Back
-                    </button>
-                </>)}
-                <button
-                    className="sec-btn-grey"
-                    onClick={() => {
-                        const header = document.querySelector('.canvas-header-content');
-                        if (header) {
-                            header.style.display = header.style.display === 'none' ? 'block' : 'none';
-                        }
-                    }}
-                >
-                    Toggle View
-                </button>
-
-
-                <div className='canvas-header-content'>
-                    {mode < 4 && (
-                        <>
-                            <h2>Graph Editor</h2>
-                            <p>Construct a graph by adding nodes and edges.</p>
-                            <div className="mode-buttons">
-                                <button
-                                    className={mode === 1 ? 'selected btn no-hover' : 'btn'}
+            {toggleView && (
+                <>
+                    <div className="canvas-header">
+                        <div className='canvas-header-content'>
+                            <h1 onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+                                <img src="/heptagon.png" alt="Logo" className="logo"
+                                    style={{ width: '30px', verticalAlign: 'middle', marginRight: '10px', paddingBottom: '10px' }} />
+                                Geo-Compute
+                            </h1>
+                            {mode === 4 && (<>
+                                <button className="sec-btn-grey"
                                     onClick={() => {
-                                        setMode((prevMode) => (prevMode !== 1 ? 1 : 0));
-                                        setSelectedNode(null);
-                                    }}
-                                >
-                                    Add Node
-                                </button>
-                                <button
-                                    className={mode === 2 ? 'selected btn no-hover' : 'btn'}
-                                    onClick={() => {
-                                        if (nodes.length < 2) {
-                                            alert("Please add 2 nodes first.");
-                                            return;
-                                        }
-                                        setMode((prevMode) => (prevMode !== 2 ? 2 : 0));
-                                        setSelectedNode(null);
-                                    }}
-                                >
-                                    Add Edge
-                                </button>
-                            </div>
-
-                            <p>Nodes: {nodes.length}</p>
-                            <p>Edges: {edges.reduce((sum, neighbors) => sum + neighbors.length, 0) / 2}</p>
-
-                            <button onClick={() => saveData(nodes, edges)} className="sec-btn-success">
-                                Save Graph
-                            </button>
-                            <button onClick={() => clearScene(true)} className="sec-btn-grey">
-                                Clear Graph
-                            </button>
-                            <div>
-                                <input
-                                    type="file"
-                                    accept=".json"
-                                    onChange={(e) => {
-                                        const file = e.target.files[0];
-                                        if (file) {
-                                            clearScene(true);
-                                            loadData(file);
-                                        }
-                                    }}
-                                />
-                            </div>
-                            {nodes.length > 0 && (<div>
-                                <button
-                                    onClick={() => {
-                                        if (!nodes.length && !edges.length) {
-                                            alert("Please add a graph first.");
-                                            return;
-                                        }
-                                        setIsProcessing(true);
-                                        checkTree();
-                                        setMode(4)
-                                    }}
-                                    className="btn"
-                                >
-                                    Graph Layout Algorithms
-                                </button>
-                            </div>)}
-                        </>)}
-                    {mode === 4 && (<>
-                        <div className='algo-section'>
-                            <h2>Graph Layout Algorithms</h2>
-                            <p>Choose an algorithm to apply to the graph.</p>
-                            <button
-                                className={selectedAlgorithm === 1 ? 'selected btn no-hover' : 'btn-outline'}
-                                onClick={() => {
-                                    setSelectedAlgorithm(1);
-                                }}
-                            >
-                                Fruchterman-Reingold
-                            </button>
-                            <div className="iterations-container">
-                                <label htmlFor="iterationsA">Number of Iterations</label>
-                                <input
-                                    type="number"
-                                    id="iterationsA"
-                                    min="1"
-                                    max="2000"
-                                    defaultValue="100"
-                                />
-                            </div>
-                            <button
-                                onClick={() => {
-                                    const iterationsInput = document.querySelector("#iterationsA");
-                                    const iterations = iterationsInput ? parseInt(iterationsInput.value, 10) : 0;
-
-                                    if (selectedAlgorithm === 1) {
-                                        recalibrateGraph(fruchtermanReingold(iterations, nodes, edges));
-                                    } else {
-                                        alert("Choose an algorithm to apply to the graph.");
-                                    }
-                                }}
-                                className="btn no-hover"
-                                style={{ marginTop: '0px' }}
-                            >
-                                Run
-                            </button>
-                        </div>
-                        {!isProcessing && isTree && (<>
-                            <div className='algo-section'>
-                                <h2>Tree Layout Algorithms</h2>
-                                <h3 style={{ color: '#32CD32' }}>(Graph is a tree)</h3>
-                                <button
-                                    className={selectedAlgorithm === 5 ? 'selected btn no-hover' : 'btn-outline'}
-                                    onClick={() => {
-                                        setSelectedAlgorithm(5);
-                                    }}
-                                >
-                                    Radial
-                                </button>
-                                <button
-                                    className="btn no-hover"
-                                    onClick={() => {
-                                        if (selectedAlgorithm === 5) {
-                                            radial();
-                                        } else {
-                                            alert("Choose an algorithm to apply to the graph.");
-                                        }
+                                        setMode(0);
+                                        setSelectedAlgorithm(null);
                                     }}>
-                                    Run
+                                    Back
                                 </button>
-                                {selectedAlgorithm === 5 && (<>
-                                    <p>You can select the root node for the radial layout.</p>
+                            </>)}
+
+                            {mode < 4 && (
+                                <>
+                                    <h2>Graph Editor</h2>
+                                    <p>Construct a graph by adding nodes and edges.</p>
+                                    <div className="mode-buttons">
+                                        <button
+                                            className={mode === 1 ? 'selected btn no-hover' : 'btn'}
+                                            onClick={() => {
+                                                setMode((prevMode) => (prevMode !== 1 ? 1 : 0));
+                                                setSelectedNode(null);
+                                            }}
+                                        >
+                                            Add Node
+                                        </button>
+                                        <button
+                                            className={mode === 2 ? 'selected btn no-hover' : 'btn'}
+                                            onClick={() => {
+                                                if (nodes.length < 2) {
+                                                    alert("Please add 2 nodes first.");
+                                                    return;
+                                                }
+                                                setMode((prevMode) => (prevMode !== 2 ? 2 : 0));
+                                                setSelectedNode(null);
+                                            }}
+                                        >
+                                            Add Edge
+                                        </button>
+                                    </div>
+
+                                    <p>Nodes: {nodes.length}</p>
+                                    <p>Edges: {edges.reduce((sum, neighbors) => sum + neighbors.length, 0) / 2}</p>
+
+                                    <button onClick={() => saveData(nodes, edges)} className="sec-btn-success">
+                                        Save Graph
+                                    </button>
+                                    <button onClick={() => clearScene(true)} className="sec-btn-grey">
+                                        Clear Graph
+                                    </button>
+                                    <div>
+                                        <input
+                                            type="file"
+                                            accept=".json"
+                                            onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if (file) {
+                                                    clearScene(true);
+                                                    loadData(file);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    {nodes.length > 0 && (<div>
+                                        <button
+                                            onClick={() => {
+                                                if (!nodes.length && !edges.length) {
+                                                    alert("Please add a graph first.");
+                                                    return;
+                                                }
+                                                setIsProcessing(true);
+                                                checkTree();
+                                                setMode(4)
+                                            }}
+                                            className="btn"
+                                        >
+                                            Graph Layout Algorithms
+                                        </button>
+                                    </div>)}
                                 </>)}
-                            </div>
-                        </>)}
-                        {isProcessing && (<>
-                            <div className='algo-section'>
-                                <h2>Processing...</h2>
-                                <p>Please wait while we check if the graph is a tree.</p>
-                            </div>
-                        </>
-                        )}
-                        {!isProcessing && !isTree && (<>
-                            <div className='algo-section'>
-                                <h2>Tree Layout Algorithms</h2>
-                                <h3 style={{ color: '#FF0000' }}>(Graph is not a tree)</h3>
-                                <p>Tree layout algorithms are not applicable to non-tree graphs.</p>
-                            </div>
-                        </>
-                        )}
+                            {mode === 4 && (<>
+                                <div className='algo-section'>
+                                    <h2>Graph Layout Algorithms</h2>
+                                    <p>Choose an algorithm to apply to the graph.</p>
+                                    <button
+                                        className={selectedAlgorithm === 1 ? 'selected btn no-hover' : 'btn-outline'}
+                                        onClick={() => {
+                                            setSelectedAlgorithm(1);
+                                        }}
+                                    >
+                                        Fruchterman-Reingold
+                                    </button>
+                                    <div className="iterations-container">
+                                        <label htmlFor="iterationsA">Number of Iterations</label>
+                                        <input
+                                            type="number"
+                                            id="iterationsA"
+                                            min="1"
+                                            max="2000"
+                                            defaultValue="100"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            const iterationsInput = document.querySelector("#iterationsA");
+                                            const iterations = iterationsInput ? parseInt(iterationsInput.value, 10) : 0;
 
-                    </>)}
-                </div>
-            </div>
+                                            if (selectedAlgorithm === 1) {
+                                                recalibrateGraph(fruchtermanReingold(iterations, nodes, edges));
+                                                alert("Fruchterman-Reingold algorithm applied to the graph.", 'success');
+                                            } else {
+                                                alert("Choose an algorithm to apply to the graph.");
+                                            }
+                                        }}
+                                        className="btn no-hover"
+                                        style={{ marginTop: '0px' }}
+                                    >
+                                        Run
+                                    </button>
+                                </div>
+                                {!isProcessing && isTree && (<>
+                                    <div className='algo-section'>
+                                        <h2>Tree Layout Algorithms</h2>
+                                        <h3 style={{ color: '#32CD32' }}>(Graph is a tree)</h3>
+                                        <button
+                                            className={selectedAlgorithm === 5 ? 'selected btn no-hover' : 'btn-outline'}
+                                            onClick={() => {
+                                                setSelectedAlgorithm(5);
+                                            }}
+                                        >
+                                            Radial
+                                        </button>
+                                        <button
+                                            className="btn no-hover"
+                                            onClick={() => {
+                                                if (selectedAlgorithm === 5) {
+                                                    radial();
+                                                    alert("Radial algorithm applied to the graph.", 'success');
+                                                } else {
+                                                    alert("Choose an algorithm to apply to the graph.");
+                                                }
+                                            }}>
+                                            Run
+                                        </button>
+                                        {selectedAlgorithm === 5 && (<>
+                                            <p>You can select the root node for the radial layout.</p>
+                                        </>)}
+                                    </div>
+                                </>)}
+                                {isProcessing && (<>
+                                    <div className='algo-section'>
+                                        <h2>Processing...</h2>
+                                        <p>Please wait while we check if the graph is a tree.</p>
+                                    </div>
+                                </>
+                                )}
+                                {!isProcessing && !isTree && (<>
+                                    <div className='algo-section'>
+                                        <h2>Tree Layout Algorithms</h2>
+                                        <h3 style={{ color: '#FF0000' }}>(Graph is not a tree)</h3>
+                                        <p>Tree layout algorithms are not applicable to non-tree graphs.</p>
+                                    </div>
+                                </>
+                                )}
 
-            <div className="load-example">
-                    <>
-                        <label htmlFor="example-select">Load Example: </label>
-                        <select
-                            id="example-select"
-                            onChange={(e) => {
-                                const selectedGraph = e.target.value;
-                                if (selectedGraph) {
-                                    fetch(`/examples/${selectedGraph}.json`)
-                                        .then((response) => response.json())
-                                        .then((data) => {
-                                            clearScene(true);
-                                            setNodes(data.nodes || []);
-                                            setEdges(data.edges || []);
-                                        })
-                                        .catch((error) => {
-                                            console.error('Error loading example data: ', error);
-                                        });
-                                }
-                                e.target.value = "";
+                            </>)}
+                        </div>
+
+                        <button
+                            className="toggle-view"
+                            onClick={() => {
+                                setToggleView(!toggleView);
                             }}
                         >
-                            <option value="">Select</option>
-                            <option value="graph_1">Graph 1</option>
-                            <option value="graph_2">Graph 2</option>
-                            <option value="graph_3">Graph 3</option>
-                            <option value="graph_4">Graph 4</option>
-                        </select>
-                    </>
+                            {!toggleView ? 'Show Header' : 'Hide Header'}
+                        </button>
+                    </div>
+                </>
+            )}
+
+            {!toggleView && (
+                <button
+                    className="toggle-view show"
+                    onClick={() => {
+                        setToggleView(!toggleView);
+                    }}
+                >
+                    Show Header
+                </button>
+            )}
+
+            <div className="load-example">
+                <label htmlFor="example-select">Load </label>
+                <select
+                    id="example-select"
+                    onChange={(e) => {
+                        const selectedGraph = e.target.value;
+                        if (selectedGraph) {
+                            fetch(`/examples/${selectedGraph}.json`)
+                                .then((response) => response.json())
+                                .then((data) => {
+                                    clearScene(true);
+                                    setNodes(data.nodes || []);
+                                    setEdges(data.edges || []);
+                                })
+                                .catch((error) => {
+                                    console.error('Error loading example data: ', error);
+                                });
+                        }
+                        e.target.value = "";
+                    }}
+                >
+                    <option value="">Select</option>
+                    <option value="graph_1">Graph 1</option>
+                    <option value="graph_2">Graph 2</option>
+                    <option value="graph_3">Graph 3</option>
+                    <option value="graph_4">Graph 4</option>
+                    <option value="graph_5">Graph 5</option>
+                </select>
             </div>
         </div >
     );
