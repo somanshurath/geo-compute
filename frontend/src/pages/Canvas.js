@@ -565,22 +565,6 @@ function Canvas() {
                             >
                                 Fruchterman-Reingold
                             </button>
-                            {/* <button
-                                className={selectedAlgorithm === 2 ? 'selected btn no-hover' : 'btn-outline'}
-                                onClick={() => {
-                                    setSelectedAlgorithm(2);
-                                }}
-                            >
-                                Eades
-                            </button>
-                            <button
-                                className={selectedAlgorithm === 3 ? 'selected btn no-hover' : 'btn-outline'}
-                                onClick={() => {
-                                    setSelectedAlgorithm(3);
-                                }}
-                            >
-                                Tutte
-                            </button> */}
                             <div className="iterations-container">
                                 <label htmlFor="iterationsA">Number of Iterations</label>
                                 <input
@@ -598,10 +582,6 @@ function Canvas() {
 
                                     if (selectedAlgorithm === 1) {
                                         recalibrateGraph(fruchtermanReingold(iterations, nodes, edges));
-                                    } else if (selectedAlgorithm === 2) {
-                                        alert("Eades algorithm is not implemented yet.");
-                                    } else if (selectedAlgorithm === 3) {
-                                        alert("Tutte algorithm is not implemented yet.");
                                     } else {
                                         alert("Choose an algorithm to apply to the graph.");
                                     }
@@ -616,16 +596,6 @@ function Canvas() {
                             <div className='algo-section'>
                                 <h2>Tree Layout Algorithms</h2>
                                 <h3 style={{ color: '#32CD32' }}>(Graph is a tree)</h3>
-
-                                {/* <button
-                                    className={selectedAlgorithm === 4 ? 'selected btn no-hover' : 'btn-outline'}
-                                    onClick={() => {
-                                        setSelectedAlgorithm(4);
-
-                                    }}
-                                >
-                                    Reingold-Tilford
-                                </button> */}
                                 <button
                                     className={selectedAlgorithm === 5 ? 'selected btn no-hover' : 'btn-outline'}
                                     onClick={() => {
@@ -637,9 +607,7 @@ function Canvas() {
                                 <button
                                     className="btn no-hover"
                                     onClick={() => {
-                                        if (selectedAlgorithm === 4) {
-                                            reingoldTilford();
-                                        } else if (selectedAlgorithm === 5) {
+                                        if (selectedAlgorithm === 5) {
                                             radial();
                                         } else {
                                             alert("Choose an algorithm to apply to the graph.");
@@ -670,6 +638,37 @@ function Canvas() {
 
                     </>)}
                 </div>
+            </div>
+
+            <div className="load-example">
+                    <>
+                        <label htmlFor="example-select">Load Example: </label>
+                        <select
+                            id="example-select"
+                            onChange={(e) => {
+                                const selectedGraph = e.target.value;
+                                if (selectedGraph) {
+                                    fetch(`/examples/${selectedGraph}.json`)
+                                        .then((response) => response.json())
+                                        .then((data) => {
+                                            clearScene(true);
+                                            setNodes(data.nodes || []);
+                                            setEdges(data.edges || []);
+                                        })
+                                        .catch((error) => {
+                                            console.error('Error loading example data: ', error);
+                                        });
+                                }
+                                e.target.value = "";
+                            }}
+                        >
+                            <option value="">Select</option>
+                            <option value="graph_1">Graph 1</option>
+                            <option value="graph_2">Graph 2</option>
+                            <option value="graph_3">Graph 3</option>
+                            <option value="graph_4">Graph 4</option>
+                        </select>
+                    </>
             </div>
         </div >
     );

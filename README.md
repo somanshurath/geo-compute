@@ -3,9 +3,9 @@
 A web-based application for visualizing and analyzing geometric data. You can construct graphs on the `Canvas` page which can be used by graph layout algorithms to restructure the graph.
 <br/>
 
-Currently Fruchterman-Reingold algorithm has been implemented. The application is built using `React` and `Three.js` for rendering (all computations and rendering is being done in `2d only`, for purposes of simplicity).
+Currently Fruchterman-Reingold algorithm and Radial algorithm has been implemented. The application is built using `React` and `Three.js` for rendering (all computations and rendering is being done in `2d only`, for purposes of simplicity).
 
-![Geo-Compute](frontend/src/assets/image.png)
+![Geo-Compute](frontend/src/assets/status_1.2.png)
 
 Further plans:
 
@@ -17,4 +17,4 @@ Further plans:
 - Implement more algorithms
   - Tutte's algorithm
 - Allow user to change hyperparameters of the algorithm
-- Import/export graph data for universal support
+- Import/export graph data for universal support ✅
