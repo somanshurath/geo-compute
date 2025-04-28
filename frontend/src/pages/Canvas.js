@@ -2,22 +2,37 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
 
+import { fnIsTree } from '../algorithms/tree-detection';
+import { fruchtermanReingold } from '../algorithms/fruchtermanReingold';
+
 function Canvas() {
     const mountRef = useRef(null);
     const sceneRef = useRef(null);
     const cameraRef = useRef(null);
     const rendererRef = useRef(null);
-    const [mode, setMode] = useState(0); // 1: add node, 2: add edge, 0: none, 4: graph layout algorithms
+    const [mode, setMode] = useState(() => {
+        const savedMode = localStorage.getItem('mode');
+        return savedMode !== null ? parseInt(savedMode, 10) : 0; // 1: add node, 2: add edge, 0: none, 4: graph layout algorithms
+    });
+
     const [selectedAlgorithm, setSelectedAlgorithm] = useState(null);
     const [nodes, setNodes] = useState([]);
     const [edges, setEdges] = useState([]);
     const [selectedNode, setSelectedNode] = useState(null);
+
+    const [isTree, setIsTree] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+
     let saveCount = 1;
 
     const navigate = useNavigate();
 
     const customAlertRef = useRef(null);
     const customAlertTextRef = useRef(null);
+
+    useEffect(() => {
+        localStorage.setItem('mode', mode);
+    }, [mode]);
 
     const alert = (message) => {
         if (!customAlertRef.current) {
@@ -268,64 +283,80 @@ function Canvas() {
         setNodes(newNodes);
     }
 
-    const fruchtermanReingold = (iterations) => {
-        const k = 2; // ?
-        const temperature = 5.0; // ?
+    const reingoldTilford = () => {
+        // Implement Reingold-Tilford algorithm here
+        // This is a placeholder function for the Reingold-Tilford algorithm
+        alert("Reingold-Tilford algorithm is not implemented yet.");
+    }
 
-        let positions = nodes.map(node => [...node]);
+    const radial = () => {
+        // Implement Radial algorithm here
+        // This is a placeholder function for the Radial algorithm
+        alert("Radial algorithm is not implemented yet.");
+    }
 
-        for (let iter = 0; iter < iterations; iter++) {
-            const coolingFactor = temperature * Math.pow(1.0 - iter / iterations, 2); // ?
-            let displacements = Array(nodes.length).fill().map(() => [0, 0, 0]);
-
-            for (let i = 0; i < nodes.length; i++) {
-                for (let j = 0; j < nodes.length; j++) {
-                    if (i !== j) {
-                        const dx = positions[i][0] - positions[j][0];
-                        const dy = positions[i][1] - positions[j][1];
-                        const distance = Math.sqrt(dx * dx + dy * dy) || 0.001;
-
-                        const repulsiveForce = k * k / distance;
-
-                        displacements[i][0] += (dx / distance) * repulsiveForce;
-                        displacements[i][1] += (dy / distance) * repulsiveForce;
-                    }
-                }
-            }
-
-            for (let i = 0; i < edges.length; i++) {
-                for (let j = 0; j < edges[i].length; j++) {
-                    const neighbor = edges[i][j];
-
-                    if (i < neighbor) {
-                        const dx = positions[i][0] - positions[neighbor][0];
-                        const dy = positions[i][1] - positions[neighbor][1];
-                        const distance = Math.sqrt(dx * dx + dy * dy) || 0.001;
-
-                        const attractiveForce = distance * distance / k;
-
-                        displacements[i][0] -= (dx / distance) * attractiveForce;
-                        displacements[i][1] -= (dy / distance) * attractiveForce;
-                        displacements[neighbor][0] += (dx / distance) * attractiveForce;
-                        displacements[neighbor][1] += (dy / distance) * attractiveForce;
-                    }
-                }
-            }
-
-            for (let i = 0; i < nodes.length; i++) {
-                const dx = displacements[i][0];
-                const dy = displacements[i][1];
-                const distance = Math.sqrt(dx * dx + dy * dy) || 0.001;
-
-                const limitedDistance = Math.min(distance, coolingFactor);
-
-                positions[i][0] += (dx / distance) * limitedDistance;
-                positions[i][1] += (dy / distance) * limitedDistance;
-                positions[i][2] = 0;
-            }
+    useEffect(() => {
+        const savedGraph = localStorage.getItem('graphData');
+        if (savedGraph) {
+            const { nodes: savedNodes, edges: savedEdges } = JSON.parse(savedGraph);
+            setNodes(savedNodes || []);
+            setEdges(savedEdges || []);
         }
-        recalibrateGraph(positions);
+    }, []);
+
+    const saveGraphToLocalStorage = (nodes, edges) => {
+        const graphData = { nodes, edges };
+        localStorage.setItem('graphData', JSON.stringify(graphData));
     };
+
+    useEffect(() => {
+        saveGraphToLocalStorage(nodes, edges);
+    }, [nodes, edges]);
+
+    const detectLayoutChangeAndReload = React.useCallback(() => {
+        let initialWidth = window.innerWidth;
+        let initialHeight = window.innerHeight;
+
+        const handleResize = () => {
+            if (window.innerWidth !== initialWidth || window.innerHeight !== initialHeight) {
+                saveGraphToLocalStorage(nodes, edges);
+                window.location.reload();
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [nodes, edges]);
+
+    useEffect(() => {
+        const cleanup = detectLayoutChangeAndReload();
+        return cleanup;
+    }, [nodes, edges, detectLayoutChangeAndReload]);
+
+    const checkTree = React.useCallback(async () => {
+        setIsProcessing(true);
+        const adjList = {};
+        nodes.forEach((node, index) => {
+            adjList[index] = edges[index];
+        });
+
+        const vertexCount = nodes.length;
+        const edgeCount = edges.reduce((sum, neighbors) => sum + neighbors.length, 0) / 2;
+
+        const isTreeResult = await fnIsTree(adjList, vertexCount, edgeCount);
+
+        setIsTree(isTreeResult);
+        setIsProcessing(false);
+    }, [nodes, edges]);
+
+    useEffect(() => {
+        if (mode === 4) {
+            checkTree();
+        }
+    }, [mode, checkTree]);
 
     return (
         <div style={{ width: '100%', height: '100vh', overflow: 'hidden' }}>
@@ -392,12 +423,25 @@ function Canvas() {
                                     alert("Please add a graph first.");
                                     return;
                                 }
+                                checkTree();
                                 setMode(4)
                             }}
                             className="btn"
                         >
                             Graph Layout Algorithms
                         </button>
+                        {/* <button
+                            onClick={() => {
+                                if (!nodes.length && !edges.length) {
+                                    alert("Please add a graph first.");
+                                    return;
+                                }
+                                checkTree();
+                            }}
+                            className="btn"
+                        >
+                            Check if Tree
+                        </button> */}
                     </>)}
                 </>)}
                 {mode === 4 && (<>
@@ -408,9 +452,8 @@ function Canvas() {
                         }}>
                         Back
                     </button>
-                    <h2>Graph Layout Algorithms</h2>
-                    <p>Choose an algorithm to apply to the graph.</p>
                     <div className='algo-section'>
+                        <h2>Graph Layout Algorithms</h2>
                         <button
                             className={selectedAlgorithm === 1 ? 'selected btn' : 'btn'}
                             onClick={() => {
@@ -424,7 +467,6 @@ function Canvas() {
                             onClick={() => {
                                 setSelectedAlgorithm(2);
                             }}
-                            disabled={true}
                         >
                             Eades
                         </button>
@@ -433,32 +475,32 @@ function Canvas() {
                             onClick={() => {
                                 setSelectedAlgorithm(3);
                             }}
-                            disabled={true}
                         >
                             Tutte
                         </button>
-                    </div>
-                    <div className='algo-section'>
-                        <label htmlFor="iterations">Run for Iterations: </label>
-                        <input
-                            type="number"
-                            id="iterations"
-                            min="1"
-                            max="2000"
-                            defaultValue="100"
-                        />
+                        <div className="iterations-container">
+                            <label htmlFor="iterationsA">Number of Iterations</label>
+                            <input
+                                type="number"
+                                id="iterationsA"
+                                min="1"
+                                max="2000"
+                                defaultValue="100"
+                            />
+                        </div>
                         <button
                             onClick={() => {
-                                const iterations = parseInt(document.getElementById("iterations").value, 10);
+                                const iterationsInput = document.querySelector("#iterationsA");
+                                const iterations = iterationsInput ? parseInt(iterationsInput.value, 10) : 0;
 
                                 if (selectedAlgorithm === 1) {
-                                    fruchtermanReingold(iterations);
+                                    recalibrateGraph(fruchtermanReingold(iterations, nodes, edges));
                                 } else if (selectedAlgorithm === 2) {
-                                    // Call Eades algorithm
+                                    alert("Eades algorithm is not implemented yet.");
                                 } else if (selectedAlgorithm === 3) {
-                                    // Call Tutte algorithm
+                                    alert("Tutte algorithm is not implemented yet.");
                                 } else {
-                                    alert("Please select an algorithm first.");
+                                    alert("Choose an algorithm to apply to the graph.");
                                 }
                             }}
                             className="btn"
@@ -466,7 +508,29 @@ function Canvas() {
                             Run
                         </button>
                     </div>
+                    {!isProcessing && isTree && (<>
+                        <div className='algo-section'>
+                            <h2>Tree Layout Algorithms</h2>
+                            <h3 style={{ color: '#32CD32' }}>(Graph is a tree)</h3>
 
+                            <button
+                                className={selectedAlgorithm === 4 ? 'selected btn' : 'btn'}
+                                onClick={() => {
+                                    reingoldTilford();
+                                }}
+                            >
+                                Reingold-Tilford
+                            </button>
+                            <button
+                                className={selectedAlgorithm === 5 ? 'selected btn' : 'btn'}
+                                onClick={() => {
+                                    radial();
+                                }}
+                            >
+                                Radial
+                            </button>
+                        </div>
+                    </>)}
                 </>)}
             </div>
         </div >

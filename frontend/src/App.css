@@ -1,3 +1,9 @@
+* {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif !important;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -140,6 +146,12 @@ code {
   font-weight: 500;
 }
 
+.canvas-header h3 {
+  font-size: 1rem;
+  margin: 5px 0;
+  color: #cccccc;
+}
+
 .canvas-header p {
   font-size: 1rem;
   margin: 5px 0;
@@ -206,47 +218,8 @@ code {
 }
 
 .algo-section {
-  margin-top: 10px;
+  margin-top: 20px;
   color: #cccccc;
-}
-
-.algo-section input[type="number"] {
-  background-color: #2a2a3d;
-  color: #f0f0f0;
-  border: 1px solid #444;
-  border-radius: 5px;
-  padding: 6px 10px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  width: 60px;
-  height: 1.2rem;
-  margin-right: 20px;
-}
-
-.algo-section input[type="number"]:hover {
-  border-color: #61dafb;
-}
-
-.algo-section input[type="number"]:focus {
-  outline: none;
-  border-color: #61dafb;
-  box-shadow: 0 0 5px rgba(97, 223, 251, 0.5);
-}
-
-/* Styling the up/down arrows */
-.algo-section input[type="number"]::-webkit-inner-spin-button {
-  opacity: 1;
-  background: #258ccc;
-  border-radius: 3px;
-  height: 20px;
-  margin-right: 2px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.algo-section input[type="number"]::-webkit-inner-spin-button:hover {
-  background-color: #61dafb;
-  transform: scale(1.1);
 }
 
 h1,
@@ -266,6 +239,7 @@ label {
   border-radius: 5px;
   cursor: pointer;
   transition: all 0.3s ease;
+  font-family: inherit;
 }
 
 .sec-btn-grey:hover {
@@ -287,4 +261,37 @@ label {
 .sec-btn-success:hover {
   background-color: #2ecc71;
   transform: scale(1.05);
+}
+
+.iterations-container {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.iterations-container label {
+  font-size: 1rem;
+  color: #f0f0f0;
+}
+
+.iterations-container input {
+  background-color: #2a2a3d;
+  color: #f0f0f0;
+  border: 1px solid #444;
+  border-radius: 5px;
+  padding: 6px 10px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  width: 60px;
+}
+
+.iterations-container input:hover {
+  border-color: #61dafb;
+}
+
+.iterations-container input:focus {
+  outline: none;
+  border-color: #61dafb;
+  box-shadow: 0 0 5px rgba(97, 223, 251, 0.5);
 }
