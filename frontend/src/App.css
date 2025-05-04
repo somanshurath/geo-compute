@@ -166,7 +166,7 @@ code {
   color: #bbbbbb;
 }
 
-.canvas-header .btn {
+.canvas-header .btn, .measure .btn {
   display: inline-block;
   margin: 10px 5px 0 0;
   padding: 8px 12px;
@@ -178,10 +178,10 @@ code {
   cursor: pointer;
 }
 
-.canvas-header .btn:hover {
+/* .canvas-header .btn:hover {
   background-color: #61dafb;
   transform: scale(1.05);
-}
+} */
 
 .btn-outline {
   display: inline-block;
@@ -196,11 +196,12 @@ code {
   transition: all 0.3s ease;
 }
 
+/* 
 .btn-outline:hover {
   background-color: #61dafb;
   color: #282c34;
   transform: scale(1.05);
-}
+} */
 
 .canvas-header input[type="file"] {
   margin-top: 10px;
@@ -326,6 +327,24 @@ label {
   transform: scale(1) !important;
 }
 
+.measure {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background-color: rgba(42, 42, 61, 0.8);
+  color: #f0f0f0;
+  padding: 10px 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 1000;
+}
+
+.measure p {
+  margin: 0;
+  font-size: 1rem;
+}
+
 .load-example {
   position: fixed;
   bottom: 20px;
@@ -340,31 +359,46 @@ label {
 }
 
 #example-select {
-  background-color: #2a2a3d; /* Dark background */
-  color: #f0f0f0; /* Light text */
-  border: 1px solid #444; /* Subtle border */
-  border-radius: 10px; /* Rounded corners */
-  padding: 8px 12px; /* Padding for better spacing */
-  font-size: 1rem; /* Font size */
-  font-family: inherit; /* Match the app's font */
-  cursor: pointer; /* Pointer cursor for interactivity */
-  transition: all 0.3s ease; /* Smooth transition for hover effects */
+  background-color: #2a2a3d;
+  /* Dark background */
+  color: #f0f0f0;
+  /* Light text */
+  border: 1px solid #444;
+  /* Subtle border */
+  border-radius: 10px;
+  /* Rounded corners */
+  padding: 8px 12px;
+  /* Padding for better spacing */
+  font-size: 1rem;
+  /* Font size */
+  font-family: inherit;
+  /* Match the app's font */
+  cursor: pointer;
+  /* Pointer cursor for interactivity */
+  transition: all 0.3s ease;
+  /* Smooth transition for hover effects */
   width: 90px;
 }
 
 #example-select:hover {
-  border-color: #61dafb; /* Highlight border on hover */
+  border-color: #61dafb;
+  /* Highlight border on hover */
 }
 
 #example-select:focus {
-  outline: none; /* Remove default focus outline */
-  border-color: #61dafb; /* Highlight border on focus */
-  box-shadow: 0 0 5px rgba(97, 223, 251, 0.5); /* Add a subtle glow */
+  outline: none;
+  /* Remove default focus outline */
+  border-color: #61dafb;
+  /* Highlight border on focus */
+  box-shadow: 0 0 5px rgba(97, 223, 251, 0.5);
+  /* Add a subtle glow */
 }
 
 #example-select option {
-  background-color: #2a2a3d; /* Dark background for options */
-  color: #f0f0f0; /* Light text */
+  background-color: #2a2a3d;
+  /* Dark background for options */
+  color: #f0f0f0;
+  /* Light text */
 }
 
 .toggle-view {
